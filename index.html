@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Welcome Guilherme</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  color:#fff;
+  min-height:100vh;
+  background:
+    linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),
+    url("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1800&q=80") center/cover fixed;
+}
+.screen{display:none;min-height:100vh;padding:28px;align-items:center;justify-content:center;text-align:center}
+.screen.active{display:flex}
+.card{
+  width:min(920px,96vw);
+  background:rgba(0,0,0,.68);
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:24px;
+  padding:28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+h1{font-size:48px;margin:0 0 30px}
+h2{margin:0 0 12px;font-size:30px}
+.stage-info{opacity:.9;margin-bottom:18px}
+button{
+  border:0;border-radius:14px;padding:13px 24px;
+  font-size:18px;font-weight:700;cursor:pointer;
+  background:#fff;color:#17351f;margin:8px;
+}
+button:disabled{opacity:.5;cursor:not-allowed}
+.options{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(120px,1fr));
+  gap:14px;
+  margin:25px auto;
+  max-width:700px;
+}
+.option{
+  background:#fff;color:#17351f;border:4px solid transparent;
+  border-radius:16px;padding:18px;font-size:20px;font-weight:700;
+  cursor:pointer;min-height:70px;
+}
+.option.correct{border-color:#20c363;background:#e7ffe9}
+.option.wrong{border-color:#ff4d4d;background:#ffe6e6}
+.zhbox{display:inline-block;text-align:center;line-height:1.15;margin:3px 5px}
+.hanzi{display:block;font-size:34px;font-weight:800}
+.pinyin{display:block;font-size:15px;opacity:.9}
+.prompt{font-size:26px;margin:18px 0 22px;font-weight:800}
+.big-zh .hanzi{font-size:56px}
+.big-zh .pinyin{font-size:22px}
+.answer-box{
+  min-height:86px;border:3px dashed rgba(255,255,255,.65);
+  border-radius:18px;padding:12px;margin:18px auto;
+  width:min(760px,95%);display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;
+  background:rgba(255,255,255,.08)
+}
+.tiles{
+  display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;
+  margin:22px auto;width:min(800px,96%);
+}
+.tile{
+  background:#fff;color:#17351f;border-radius:14px;padding:10px 14px;
+  min-width:74px;cursor:pointer;user-select:none;font-weight:700;
+  border:3px solid transparent;
+}
+.tile.used{opacity:.35;pointer-events:none}
+.feedback{min-height:38px;font-size:22px;font-weight:800;margin:12px 0}
+.good{color:#62ff91}.bad{color:#ff8b8b}
+.progress{font-size:16px;opacity:.9;margin-bottom:10px}
+.emoji{font-size:72px;margin:14px}
+.score{font-size:64px;font-weight:900;margin:20px}
+.small{font-size:14px;opacity:.85}
+@media(max-width:650px){
+ h1{font-size:38px}.options{grid-template-columns:1fr}.hanzi{font-size:28px}.big-zh .hanzi{font-size:46px}
+ .prompt{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<section id="cover" class="screen active">
+  <div>
+    <h1>welcome Guilherme</h1>
+    <button onclick="startGame()">Start</button>
+  </div>
+</section>
+
+<section id="game" class="screen">
+  <div class="card">
+    <div class="progress" id="progress"></div>
+    <h2 id="stageTitle"></h2>
+    <div class="stage-info" id="stageInfo"></div>
+    <div id="questionArea"></div>
+    <div class="feedback" id="feedback"></div>
+    <button id="checkBtn" onclick="checkBuilder()" style="display:none">Check</button>
+    <button id="clearBtn" onclick="clearAnswer()" style="display:none">Clear</button>
+    <button id="nextBtn" onclick="nextQuestion()" style="display:none">Next</button>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="card">
+    <h2>Finished!</h2>
+    <div class="score" id="scoreText"></div>
+    <div class="prompt" id="finalMessage"></div>
+    <button onclick="startGame()">Play Again</button>
+  </div>
+</section>
+
+<script>
+const vocab = [
+ {zh:"你",py:"nǐ",en:"you"},
+ {zh:"我",py:"wǒ",en:"I / me"},
+ {zh:"他",py:"tā",en:"he / him"},
+ {zh:"她",py:"tā",en:"she / her"},
+ {zh:"叫",py:"jiào",en:"to be called"},
+ {zh:"名字",py:"míngzi",en:"name"},
+ {zh:"好",py:"hǎo",en:"good"},
+ {zh:"很",py:"hěn",en:"very"},
+ {zh:"高興",py:"gāoxìng",en:"happy / glad"},
+ {zh:"認識",py:"rènshi",en:"to meet / to know"},
+ {zh:"學生",py:"xuéshēng",en:"student"},
+ {zh:"老師",py:"lǎoshī",en:"teacher"},
+ {zh:"朋友",py:"péngyǒu",en:"friend"},
+ {zh:"同學",py:"tóngxué",en:"classmate"},
+ {zh:"狗",py:"gǒu",en:"dog"},
+ {zh:"貓",py:"māo",en:"cat"},
+ {zh:"魚",py:"yú",en:"fish"},
+ {zh:"鳥",py:"niǎo",en:"bird"},
+ {zh:"兔子",py:"tùzi",en:"rabbit"},
+ {zh:"工程師",py:"gōngchéngshī",en:"engineer"},
+ {zh:"教練",py:"jiàoliàn",en:"coach"},
+ {zh:"外國人",py:"wàiguórén",en:"foreigner"}
+];
+
+const word = {
+ "你":"nǐ","我":"wǒ","他":"tā","她":"tā","叫":"jiào","什麼":"shénme","名字":"míngzi",
+ "是":"shì","學生":"xuéshēng","老師":"lǎoshī","朋友":"péngyǒu","的":"de","也":"yě",
+ "這個":"zhège","那個":"nàge","貓":"māo","狗":"gǒu","魚":"yú","鳥":"niǎo","兔子":"tùzi",
+ "工程師":"gōngchéngshī","教練":"jiàoliàn","外國人":"wàiguórén","人":"rén","誰":"shéi",
+ "不":"bù","認識":"rènshi","嗎":"ma","小明":"Xiǎomíng","小美":"Xiǎoměi","大中":"Dàzhōng",
+ "Guilherme":"Guilherme","Carlos":"Carlos","Maria":"Maria","Ana":"Ana","João":"João","朋友":"péngyǒu",
+ "動物":"dòngwù"
+};
+
+const stage2 = [
+ {en:"What is your name?", ans:["你","叫","什麼","名字"]},
+ {en:"What is his name?", ans:["他","叫","什麼","名字"]},
+ {en:"What is her name?", ans:["她","叫","什麼","名字"]},
+ {en:"My name is Guilherme.", ans:["我","叫","Guilherme"]},
+ {en:"My name is Carlos.", ans:["我","叫","Carlos"]},
+ {en:"His name is Xiao Ming.", ans:["他","叫","小明"]},
+ {en:"Her name is Xiao Mei.", ans:["她","叫","小美"]},
+ {en:"He is my friend.", ans:["他","是","我","的","朋友"]},
+ {en:"She is my friend.", ans:["她","是","我","的","朋友"]},
+ {en:"Are you a student?", ans:["你","是","學生","嗎"]},
+ {en:"Are you a teacher?", ans:["你","是","老師","嗎"]},
+ {en:"I am a student.", ans:["我","是","學生"]},
+ {en:"He is also a student.", ans:["他","也","是","學生"]},
+ {en:"She is also a teacher.", ans:["她","也","是","老師"]},
+ {en:"This is my friend.", ans:["這個","是","我","的","朋友"]},
+ {en:"That is my teacher.", ans:["那個","是","我","的","老師"]},
+ {en:"Who is that person?", ans:["那個","人","是","誰"]},
+ {en:"I don't know him.", ans:["我","不","認識","他"]}
+];
+
+const stage3 = [
+ {en:"🐱", ans:["這個","是","貓"]},
+ {en:"🐶", ans:["這個","是","狗"]},
+ {en:"🐟", ans:["那個","是","魚"]},
+ {en:"🐦", ans:["那個","是","鳥"]},
+ {en:"🐰", ans:["這個","是","兔子"]},
+ {en:"👩‍🏫", ans:["這個","是","老師"]},
+ {en:"👨‍🎓", ans:["那個","是","學生"]},
+ {en:"👨‍💻", ans:["這個","是","工程師"]},
+ {en:"🏃‍♂️", ans:["那個","是","教練"]},
+ {en:"🌎", ans:["這個","是","外國人"]}
+];
+
+const stage4 = [
+ {en:"What is this?", ans:["這個","是","什麼"]},
+ {en:"What is that?", ans:["那個","是","什麼"]},
+ {en:"What is your name?", ans:["你","叫","什麼","名字"]},
+ {en:"What is his name?", ans:["他","叫","什麼","名字"]},
+ {en:"What is her name?", ans:["她","叫","什麼","名字"]},
+ {en:"What kind of person are you?", ans:["你","是","什麼","人"]},
+ {en:"What animal is that?", ans:["那個","是","什麼","動物"]},
+ {en:"What animal is this?", ans:["這個","是","什麼","動物"]},
+ {en:"What student is he?", ans:["他","是","什麼","學生"]},
+ {en:"What teacher is she?", ans:["她","是","什麼","老師"]}
+];
+
+let stages=[], stageIndex=0, qIndex=0, current=null, score=0, total=0, answered=false;
+let answer=[];
+
+function zhToken(t){
+  return `<span class="zhbox"><span class="hanzi">${t}</span><span class="pinyin">${word[t]||""}</span></span>`;
+}
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function sample(a,n){return shuffle(a).slice(0,n)}
+
+function startGame(){
+  score=0; stageIndex=0; qIndex=0; answered=false;
+  const vqs = shuffle(vocab).map(v=>({type:"vocab",item:v}));
+  stages = [
+    {title:"Stage 1", info:"Vocabulary", type:"vocab", questions:vqs},
+    {title:"Stage 2", info:"Sentence Builder", type:"build", questions:sample(stage2,15)},
+    {title:"Stage 3", info:"Emoji Builder", type:"build", questions:shuffle(stage3)},
+    {title:"Stage 4", info:"Translation Builder", type:"build", questions:sample([...stage4,...stage2],20)}
+  ];
+  total = stages.reduce((s,x)=>s+x.questions.length,0);
+  document.getElementById("cover").classList.remove("active");
+  document.getElementById("result").classList.remove("active");
+  document.getElementById("game").classList.add("active");
+  renderQuestion();
+}
+
+function currentNumber(){
+  let n=qIndex+1;
+  for(let i=0;i<stageIndex;i++) n+=stages[i].questions.length;
+  return n;
+}
+
+function renderQuestion(){
+  answered=false; answer=[];
+  document.getElementById("feedback").textContent="";
+  document.getElementById("feedback").className="feedback";
+  document.getElementById("nextBtn").style.display="none";
+  document.getElementById("checkBtn").style.display="none";
+  document.getElementById("clearBtn").style.display="none";
+  const st=stages[stageIndex];
+  current=st.questions[qIndex];
+  document.getElementById("stageTitle").textContent=st.title;
+  document.getElementById("stageInfo").textContent=st.info;
+  document.getElementById("progress").textContent=`Question ${currentNumber()} / ${total}`;
+  if(st.type==="vocab") renderVocab();
+  else renderBuilder();
+}
+
+function renderVocab(){
+  const v=current.item;
+  const wrong=sample(vocab.filter(x=>x.en!==v.en),3).map(x=>x.en);
+  const opts=shuffle([v.en,...wrong]);
+  document.getElementById("questionArea").innerHTML = `
+    <div class="big-zh">${zhToken(v.zh)}</div>
+    <div class="options">
+      ${opts.map(o=>`<div class="option" onclick="chooseVocab(this,'${o.replace(/'/g,"\\'")}')">${o}</div>`).join("")}
+    </div>`;
+}
+function chooseVocab(el,choice){
+  if(answered)return; answered=true;
+  const correct=current.item.en;
+  document.querySelectorAll(".option").forEach(x=>{
+    if(x.textContent===correct)x.classList.add("correct");
+  });
+  if(choice===correct){
+    score++; document.getElementById("feedback").textContent="Correct!"; document.getElementById("feedback").classList.add("good");
+  }else{
+    el.classList.add("wrong");
+    document.getElementById("feedback").textContent="Correct Answer: "+correct;
+    document.getElementById("feedback").classList.add("bad");
+  }
+  document.getElementById("nextBtn").style.display="inline-block";
+}
+
+function renderBuilder(){
+  const tiles=shuffle(current.ans);
+  const isEmoji=/[\u{1F300}-\u{1FAFF}]/u.test(current.en);
+  document.getElementById("questionArea").innerHTML = `
+    <div class="${isEmoji?'emoji':'prompt'}">${current.en}</div>
+    <div id="answerBox" class="answer-box"></div>
+    <div id="tiles" class="tiles">
+      ${tiles.map((t,i)=>`<div class="tile" data-token="${t}" onclick="useTile(${i})" id="tile${i}">${zhToken(t)}</div>`).join("")}
+    </div>`;
+  document.getElementById("checkBtn").style.display="inline-block";
+  document.getElementById("clearBtn").style.display="inline-block";
+}
+function useTile(i){
+  if(answered)return;
+  const el=document.getElementById("tile"+i);
+  if(!el || el.classList.contains("used"))return;
+  const t=el.dataset.token;
+  answer.push({token:t,id:i});
+  el.classList.add("used");
+  drawAnswer();
+}
+function drawAnswer(){
+  document.getElementById("answerBox").innerHTML = answer.map((x,idx)=>`<div class="tile" onclick="removeAnswer(${idx})">${zhToken(x.token)}</div>`).join("");
+}
+function removeAnswer(idx){
+  if(answered)return;
+  const [x]=answer.splice(idx,1);
+  const el=document.getElementById("tile"+x.id);
+  if(el)el.classList.remove("used");
+  drawAnswer();
+}
+function clearAnswer(){
+  if(answered)return;
+  answer.forEach(x=>{const el=document.getElementById("tile"+x.id); if(el)el.classList.remove("used")});
+  answer=[]; drawAnswer();
+}
+function checkBuilder(){
+  if(answered)return;
+  const user=answer.map(x=>x.token).join("");
+  const correct=current.ans.join("");
+  answered=true;
+  if(user===correct){
+    score++;
+    document.getElementById("feedback").textContent="Great job!";
+    document.getElementById("feedback").classList.add("good");
+  }else{
+    document.getElementById("feedback").innerHTML=`Correct Answer: ${current.ans.map(zhToken).join("")}`;
+    document.getElementById("feedback").classList.add("bad");
+  }
+  document.getElementById("checkBtn").style.display="none";
+  document.getElementById("clearBtn").style.display="none";
+  document.getElementById("nextBtn").style.display="inline-block";
+}
+
+function nextQuestion(){
+  qIndex++;
+  if(qIndex>=stages[stageIndex].questions.length){
+    stageIndex++; qIndex=0;
+    if(stageIndex>=stages.length){showResult();return;}
+  }
+  renderQuestion();
+}
+function showResult(){
+  const percent=Math.round(score/total*100);
+  document.getElementById("game").classList.remove("active");
+  document.getElementById("result").classList.add("active");
+  document.getElementById("scoreText").textContent=percent+" / 100";
+  let msg="";
+  if(percent>=90) msg="Excellent! Your Chinese is getting stronger!";
+  else if(percent>=80) msg="Great job! Keep practicing!";
+  else if(percent>=60) msg="Good work! Practice one more time!";
+  else msg="Nice try! Chinese needs repetition. Let's play again!";
+  document.getElementById("finalMessage").textContent=msg;
+}
+</script>
+</body>
+</html>
